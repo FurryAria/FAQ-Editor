@@ -8,79 +8,133 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
-        .category-card,
-        .question-card {
-            transition: all 0.2s;
+        /* 更新后的样式部分 */
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --success-color: #4cc9f0;
+            --warning-color: #f8961e;
+            --danger-color: #f94144;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
         }
 
-        .category-card:hover,
-        .question-card:hover {
-            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
-        .answer-type-btn.active {
-            background-color: #0d6efd;
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .card-header {
+            background-color: white;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            border-radius: 12px 12px 0 0 !important;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .btn-outline-primary {
+            color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .btn-outline-primary:hover {
+            background-color: var(--primary-color);
             color: white;
-        }
-
-        .steps-container,
-        .grid-container,
-        .links-container,
-        .collapse-container,
-        .table-rows-container {
-            border: 1px dashed #ccc;
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 10px;
-        }
-
-        .step-item,
-        .grid-item,
-        .link-item,
-        .collapse-item,
-        .table-row-item {
-            background-color: #f8f9fa;
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 5px;
-        }
-
-        .preview-area {
-            background-color: #f8f9fa;
-            border-radius: 5px;
-            padding: 15px;
-            min-height: 200px;
-            max-height: 500px;
-            overflow-y: auto;
         }
 
         .nav-tabs .nav-link.active {
-            font-weight: bold;
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--primary-color);
+            font-weight: 600;
         }
 
-        .answer-content {
-            min-height: 150px;
+        .preview-area {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
         }
 
+        /* 更现代的输入控件样式 */
+        .form-control,
+        .form-select {
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+            padding: 0.5rem 0.75rem;
+        }
+
+        .form-control:focus,
+        .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.25);
+        }
+
+        /* 更现代的按钮样式 */
+        .btn {
+            border-radius: 8px;
+            padding: 0.5rem 1rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        /* 分类卡片特殊样式 */
+        .category-card {
+            background: linear-gradient(to right, rgba(67, 97, 238, 0.05), transparent);
+        }
+
+        /* 问题卡片特殊样式 */
+        .question-card {
+            background-color: white;
+        }
+
+        /* 更现代的模态框样式 */
+        .modal-content {
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 更现代的标签页样式 */
+        .nav-tabs {
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        /* 更现代的拖拽手柄样式 */
         .sortable-handle {
-            cursor: move;
+            color: rgba(0, 0, 0, 0.2);
+            transition: color 0.2s;
         }
 
-        .sortable-ghost {
-            opacity: 0.5;
-            background: #c8ebfb;
+        .sortable-handle:hover {
+            color: var(--primary-color);
+            cursor: grab;
         }
 
-        /* 在现有的style标签中添加 */
-        #import-json-btn {
-            background-color: #0dcaf0;
-            border-color: #0dcaf0;
-            color: white;
-        }
+        /* 响应式调整 */
+        @media (max-width: 768px) {
+            .container-fluid {
+                padding-left: 15px;
+                padding-right: 15px;
+            }
 
-        #import-json-btn:hover {
-            background-color: #0bb6d9;
-            border-color: #0bb6d9;
+            .card-body {
+                padding: 1rem;
+            }
         }
     </style>
 </head>
