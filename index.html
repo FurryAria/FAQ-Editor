@@ -1,0 +1,1584 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FAQ 编辑器</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        .category-card,
+        .question-card {
+            transition: all 0.2s;
+        }
+
+        .category-card:hover,
+        .question-card:hover {
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        }
+
+        .answer-type-btn.active {
+            background-color: #0d6efd;
+            color: white;
+        }
+
+        .steps-container,
+        .grid-container,
+        .links-container,
+        .collapse-container,
+        .table-rows-container {
+            border: 1px dashed #ccc;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        .step-item,
+        .grid-item,
+        .link-item,
+        .collapse-item,
+        .table-row-item {
+            background-color: #f8f9fa;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+
+        .preview-area {
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            padding: 15px;
+            min-height: 200px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .nav-tabs .nav-link.active {
+            font-weight: bold;
+        }
+
+        .answer-content {
+            min-height: 150px;
+        }
+
+        .sortable-handle {
+            cursor: move;
+        }
+
+        .sortable-ghost {
+            opacity: 0.5;
+            background: #c8ebfb;
+        }
+
+        /* 在现有的style标签中添加 */
+        #import-json-btn {
+            background-color: #0dcaf0;
+            border-color: #0dcaf0;
+            color: white;
+        }
+
+        #import-json-btn:hover {
+            background-color: #0bb6d9;
+            border-color: #0bb6d9;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container-fluid py-4">
+        <div class="row mb-4">
+            <div class="col">
+                <h1 class="display-5"><i class="bi bi-question-circle"></i> FAQ 编辑器</h1>
+                <p class="lead">可视化编辑 FAQ 文档并导出 JSON 格式</p>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- 左侧编辑区 -->
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <!-- 在card-header部分修改 -->
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">FAQ 结构</h5>
+                        <div>
+                            <button id="add-category-btn" class="btn btn-sm btn-primary">
+                                <i class="bi bi-plus-lg"></i> 添加分类
+                            </button>
+                            <button id="import-json-btn" class="btn btn-sm btn-info ms-2">
+                                <i class="bi bi-upload"></i> 导入 JSON
+                            </button>
+                            <input type="file" id="json-file-input" accept=".json" style="display: none;">
+                            <button id="export-json-btn" class="btn btn-sm btn-success ms-2">
+                                <i class="bi bi-download"></i> 导出 JSON
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="categories-container">
+                            <!-- 分类将在这里动态添加 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧预览区 -->
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">JSON 预览</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="preview-area" id="json-preview">
+                            <p class="text-muted">编辑内容将在这里实时预览...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加分类模态框 -->
+    <div class="modal fade" id="addCategoryModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">添加新分类</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="category-name" class="form-label">分类名称</label>
+                        <input type="text" class="form-control" id="category-name" placeholder="例如: 技术问题">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="confirm-add-category">添加</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加问题模态框 -->
+    <div class="modal fade" id="addQuestionModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">添加新问题</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="question-text" class="form-label">问题</label>
+                        <input type="text" class="form-control" id="question-text" placeholder="例如: 如何安装软件?">
+                    </div>
+                    <div class="mb-3">
+                        <label for="question-version" class="form-label">版本</label>
+                        <input type="text" class="form-control" id="question-version" value="1.0.0">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="confirm-add-question">添加</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 编辑问题模态框 -->
+    <div class="modal fade" id="editQuestionModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">编辑问题</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="edit-question-id">
+                    <div class="mb-3">
+                        <label for="edit-question-text" class="form-label">问题</label>
+                        <input type="text" class="form-control" id="edit-question-text">
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit-question-version" class="form-label">版本</label>
+                        <input type="text" class="form-control" id="edit-question-version">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">回答类型</label>
+                        <div class="d-flex flex-wrap gap-2 mb-3" id="answer-type-btns">
+                            <button type="button" class="btn btn-sm btn-outline-primary answer-type-btn active"
+                                data-type="text">简单文本</button>
+                            <button type="button" class="btn btn-sm btn-outline-primary answer-type-btn"
+                                data-type="list">列表</button>
+                            <button type="button" class="btn btn-sm btn-outline-primary answer-type-btn"
+                                data-type="steps">步骤</button>
+                            <button type="button" class="btn btn-sm btn-outline-primary answer-type-btn"
+                                data-type="code">代码</button>
+                            <button type="button" class="btn btn-sm btn-outline-primary answer-type-btn"
+                                data-type="alert">警告</button>
+                            <button type="button" class="btn btn-sm btn-outline-primary answer-type-btn"
+                                data-type="grid">网格</button>
+                            <button type="button" class="btn btn-sm btn-outline-primary answer-type-btn"
+                                data-type="links">链接</button>
+                            <button type="button" class="btn btn-sm btn-outline-primary answer-type-btn"
+                                data-type="table">表格</button>
+                            <button type="button" class="btn btn-sm btn-outline-primary answer-type-btn"
+                                data-type="video">视频</button>
+                            <button type="button" class="btn btn-sm btn-outline-primary answer-type-btn"
+                                data-type="collapse">折叠</button>
+                            <button type="button" class="btn btn-sm btn-outline-primary answer-type-btn"
+                                data-type="rating">评分</button>
+                        </div>
+                    </div>
+
+                    <ul class="nav nav-tabs mb-3" id="answer-tabs">
+                        <li class="nav-item">
+                            <a class="nav-link active" id="edit-tab" data-bs-toggle="tab" href="#edit-answer">编辑</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="preview-tab" data-bs-toggle="tab" href="#preview-answer">预览</a>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="answer-tabs-content">
+                        <div class="tab-pane fade show active" id="edit-answer">
+                            <!-- 简单文本 -->
+                            <div class="answer-content" id="text-answer-content">
+                                <textarea class="form-control" id="text-answer" rows="5"></textarea>
+                            </div>
+
+                            <!-- 列表 -->
+                            <div class="answer-content d-none" id="list-answer-content">
+                                <div id="list-items">
+                                    <div class="input-group mb-2">
+                                        <input type="text" class="form-control list-item" placeholder="列表项内容">
+                                        <button class="btn btn-outline-danger remove-list-item" type="button">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="add-list-item">
+                                    <i class="bi bi-plus-lg"></i> 添加列表项
+                                </button>
+                            </div>
+
+                            <!-- 步骤 -->
+                            <div class="answer-content d-none" id="steps-answer-content">
+                                <div id="steps-container" class="steps-container">
+                                    <!-- 步骤项将在这里动态添加 -->
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="add-step">
+                                    <i class="bi bi-plus-lg"></i> 添加步骤
+                                </button>
+                            </div>
+
+                            <!-- 代码 -->
+                            <div class="answer-content d-none" id="code-answer-content">
+                                <div class="mb-3">
+                                    <label for="code-language" class="form-label">编程语言</label>
+                                    <input type="text" class="form-control" id="code-language"
+                                        placeholder="例如: JavaScript">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="code-content" class="form-label">代码内容</label>
+                                    <textarea class="form-control" id="code-content" rows="5"></textarea>
+                                </div>
+                            </div>
+
+                            <!-- 警告 -->
+                            <div class="answer-content d-none" id="alert-answer-content">
+                                <div class="mb-3">
+                                    <label for="alert-level" class="form-label">警告级别</label>
+                                    <select class="form-select" id="alert-level">
+                                        <option value="info">信息</option>
+                                        <option value="warning">警告</option>
+                                        <option value="danger">危险</option>
+                                        <option value="success">成功</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="alert-title" class="form-label">标题</label>
+                                    <input type="text" class="form-control" id="alert-title">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="alert-content" class="form-label">内容</label>
+                                    <textarea class="form-control" id="alert-content" rows="3"></textarea>
+                                </div>
+                            </div>
+
+                            <!-- 网格 -->
+                            <div class="answer-content d-none" id="grid-answer-content">
+                                <div id="grid-container" class="grid-container">
+                                    <!-- 网格项将在这里动态添加 -->
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="add-grid-item">
+                                    <i class="bi bi-plus-lg"></i> 添加网格项
+                                </button>
+                            </div>
+
+                            <!-- 链接 -->
+                            <div class="answer-content d-none" id="links-answer-content">
+                                <div id="links-container" class="links-container">
+                                    <!-- 链接项将在这里动态添加 -->
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="add-link-item">
+                                    <i class="bi bi-plus-lg"></i> 添加链接
+                                </button>
+                            </div>
+
+                            <!-- 表格 -->
+                            <div class="answer-content d-none" id="table-answer-content">
+                                <div class="mb-3">
+                                    <label for="table-headers" class="form-label">表头 (用逗号分隔)</label>
+                                    <input type="text" class="form-control" id="table-headers"
+                                        placeholder="例如: 浏览器,版本,支持状态">
+                                </div>
+                                <div id="table-rows-container" class="table-rows-container">
+                                    <div class="mb-2">
+                                        <small class="text-muted">添加表格行后编辑</small>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="add-table-row">
+                                    <i class="bi bi-plus-lg"></i> 添加行
+                                </button>
+                            </div>
+
+                            <!-- 视频 -->
+                            <div class="answer-content d-none" id="video-answer-content">
+                                <div class="mb-3">
+                                    <label for="video-url" class="form-label">视频 URL（可能有BUG）</label>
+                                    <input type="text" class="form-control" id="video-url"
+                                        placeholder="例如: https://example.com/video.mp4">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="video-caption" class="form-label">说明文字</label>
+                                    <input type="text" class="form-control" id="video-caption" placeholder="例如: 安装教程视频">
+                                </div>
+                            </div>
+
+                            <!-- 折叠 -->
+                            <div class="answer-content d-none" id="collapse-answer-content">
+                                <div id="collapse-container" class="collapse-container">
+                                    <!-- 折叠项将在这里动态添加 -->
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="add-collapse-item">
+                                    <i class="bi bi-plus-lg"></i> 添加折叠项
+                                </button>
+                            </div>
+
+                            <!-- 评分 -->
+                            <div class="answer-content d-none" id="rating-answer-content">
+                                <div class="mb-3">
+                                    <label for="rating-question" class="form-label">问题</label>
+                                    <input type="text" class="form-control" id="rating-question"
+                                        placeholder="例如: 这个回答对您有帮助吗?">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="tab-pane fade" id="preview-answer">
+                            <div class="preview-area" id="answer-preview">
+                                <p class="text-muted">预览将在这里显示...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="save-question-changes">保存更改</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 表格行编辑模态框 -->
+    <div class="modal fade" id="editTableRowModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">编辑表格行</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="edit-row-index">
+                    <div id="row-fields-container">
+                        <!-- 动态添加的字段将在这里 -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="save-row-changes">保存更改</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script>
+        // 全局变量
+        let faqData = {
+            version: "1.0.1",
+            categories: []
+        };
+
+        let currentCategoryIndex = -1;
+        let currentQuestionIndex = -1;
+        let currentAnswerType = "text";
+        let tableHeaders = [];
+
+        // DOM 加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function () {
+            // 初始化示例数据
+            initExampleData();
+
+            // 绑定事件
+            bindEvents();
+
+            // 初始化排序功能
+            initSortable();
+
+            // 更新预览
+            updatePreview();
+        });
+
+        // 初始化示例数据
+        function initExampleData() {
+            // 这里可以添加示例数据，或者保持为空让用户从头创建
+            // 示例数据与问题描述中的JSON结构一致
+        }
+
+        // 绑定所有事件
+        function bindEvents() {
+            // 添加分类按钮
+            document.getElementById('add-category-btn').addEventListener('click', showAddCategoryModal);
+            document.getElementById('confirm-add-category').addEventListener('click', addCategory);
+
+            // 添加问题按钮 (在分类卡片上动态绑定)
+
+            // 导出JSON按钮
+            document.getElementById('export-json-btn').addEventListener('click', exportJSON);
+
+            // 添加问题模态框
+            document.getElementById('confirm-add-question').addEventListener('click', addQuestion);
+
+            // 编辑问题模态框
+            document.getElementById('save-question-changes').addEventListener('click', saveQuestionChanges);
+
+            // 回答类型按钮
+            document.querySelectorAll('.answer-type-btn').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    document.querySelectorAll('.answer-type-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    currentAnswerType = this.dataset.type;
+                    showAnswerContent(currentAnswerType);
+                });
+            });
+
+            // 列表项操作
+            document.getElementById('add-list-item').addEventListener('click', addListItem);
+
+            // 步骤操作
+            document.getElementById('add-step').addEventListener('click', addStepItem);
+
+            // 网格操作
+            document.getElementById('add-grid-item').addEventListener('click', addGridItem);
+
+            // 链接操作
+            document.getElementById('add-link-item').addEventListener('click', addLinkItem);
+
+            // 表格操作
+            document.getElementById('add-table-row').addEventListener('click', addTableRow);
+
+            // 折叠操作
+            document.getElementById('add-collapse-item').addEventListener('click', addCollapseItem);
+
+            // 表格行编辑 (在动态元素上委托事件)
+            document.addEventListener('click', function (e) {
+                if (e.target.classList.contains('edit-table-row')) {
+                    editTableRow(e);
+                }
+
+                if (e.target.classList.contains('remove-list-item')) {
+                    removeListItem(e);
+                }
+
+                if (e.target.classList.contains('remove-step')) {
+                    removeStepItem(e);
+                }
+
+                if (e.target.classList.contains('remove-grid-item')) {
+                    removeGridItem(e);
+                }
+
+                if (e.target.classList.contains('remove-link-item')) {
+                    removeLinkItem(e);
+                }
+
+                if (e.target.classList.contains('remove-table-row')) {
+                    removeTableRow(e);
+                }
+
+                if (e.target.classList.contains('remove-collapse-item')) {
+                    removeCollapseItem(e);
+                }
+            });
+
+            // 预览标签页切换时更新预览
+            document.getElementById('preview-tab').addEventListener('show.bs.tab', updateAnswerPreview);
+
+            // 表格行编辑保存
+            document.getElementById('save-row-changes').addEventListener('click', saveTableRowChanges);
+
+            // 实时预览文本变化
+            document.getElementById('text-answer').addEventListener('input', updateAnswerPreview);
+            document.getElementById('code-language').addEventListener('input', updateAnswerPreview);
+            document.getElementById('code-content').addEventListener('input', updateAnswerPreview);
+            document.getElementById('alert-level').addEventListener('change', updateAnswerPreview);
+            document.getElementById('alert-title').addEventListener('input', updateAnswerPreview);
+            document.getElementById('alert-content').addEventListener('input', updateAnswerPreview);
+            document.getElementById('video-url').addEventListener('input', updateAnswerPreview);
+            document.getElementById('video-caption').addEventListener('input', updateAnswerPreview);
+            document.getElementById('rating-question').addEventListener('input', updateAnswerPreview);
+            document.getElementById('table-headers').addEventListener('input', updateAnswerPreview);
+
+            // 导入JSON按钮
+            document.getElementById('import-json-btn').addEventListener('click', function () {
+                document.getElementById('json-file-input').click();
+            });
+
+            // 文件输入变化事件
+            document.getElementById('json-file-input').addEventListener('change', handleFileImport);
+        }
+
+        // 处理JSON文件导入
+        function handleFileImport(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+
+                    // 验证导入的数据结构
+                    if (!importedData.version || !importedData.categories) {
+                        throw new Error("无效的FAQ JSON格式");
+                    }
+
+                    // 确认是否覆盖现有数据
+                    if (faqData.categories.length > 0) {
+                        if (!confirm("导入JSON将覆盖当前数据，确定继续吗？")) {
+                            return;
+                        }
+                    }
+
+                    // 更新数据并重新渲染
+                    faqData = importedData;
+                    renderCategories();
+                    updatePreview();
+
+                    // 重置文件输入，允许重复导入同一文件
+                    document.getElementById('json-file-input').value = '';
+
+                } catch (error) {
+                    alert("导入失败: " + error.message);
+                    console.error(error);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // 初始化拖拽排序
+        function initSortable() {
+            // 分类排序
+            new Sortable(document.getElementById('categories-container'), {
+                handle: '.sortable-handle',
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                onEnd: function () {
+                    // 更新数据顺序
+                    const categories = Array.from(document.querySelectorAll('.category-card'));
+                    const newOrder = categories.map(card => parseInt(card.dataset.index));
+                    const sortedCategories = [];
+
+                    newOrder.forEach(index => {
+                        sortedCategories.push(faqData.categories[index]);
+                    });
+
+                    faqData.categories = sortedCategories;
+                    updatePreview();
+                }
+            });
+
+            // 问题排序 (在分类卡片上动态初始化)
+        }
+
+        // 显示添加分类模态框
+        function showAddCategoryModal() {
+            document.getElementById('category-name').value = '';
+            const modal = new bootstrap.Modal(document.getElementById('addCategoryModal'));
+            modal.show();
+        }
+
+        // 添加分类
+        function addCategory() {
+            const name = document.getElementById('category-name').value.trim();
+            if (!name) return;
+
+            const newCategory = {
+                name: name,
+                questions: []
+            };
+
+            faqData.categories.push(newCategory);
+
+            // 关闭模态框
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addCategoryModal'));
+            modal.hide();
+
+            // 更新UI
+            renderCategories();
+            updatePreview();
+        }
+
+        // 显示添加问题模态框
+        function showAddQuestionModal(categoryIndex) {
+            currentCategoryIndex = categoryIndex;
+            document.getElementById('question-text').value = '';
+            document.getElementById('question-version').value = '1.0.0';
+            const modal = new bootstrap.Modal(document.getElementById('addQuestionModal'));
+            modal.show();
+        }
+
+        // 添加问题
+        function addQuestion() {
+            const question = document.getElementById('question-text').value.trim();
+            const version = document.getElementById('question-version').value.trim();
+
+            if (!question) return;
+
+            const newQuestion = {
+                question: question,
+                version: version || '1.0.0',
+                answer: ""
+            };
+
+            faqData.categories[currentCategoryIndex].questions.push(newQuestion);
+
+            // 关闭模态框
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addQuestionModal'));
+            modal.hide();
+
+            // 更新UI
+            renderCategories();
+            updatePreview();
+
+            // 自动打开编辑
+            const questionIndex = faqData.categories[currentCategoryIndex].questions.length - 1;
+            showEditQuestionModal(currentCategoryIndex, questionIndex);
+        }
+
+        // 显示编辑问题模态框
+        function showEditQuestionModal(categoryIndex, questionIndex) {
+            currentCategoryIndex = categoryIndex;
+            currentQuestionIndex = questionIndex;
+
+            const question = faqData.categories[categoryIndex].questions[questionIndex];
+
+            document.getElementById('edit-question-id').value = questionIndex;
+            document.getElementById('edit-question-text').value = question.question;
+            document.getElementById('edit-question-version').value = question.version;
+
+            // 重置回答类型为简单文本
+            document.querySelectorAll('.answer-type-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector('.answer-type-btn[data-type="text"]').classList.add('active');
+            currentAnswerType = "text";
+
+            // 显示对应的回答内容
+            showAnswerContent(currentAnswerType);
+
+            // 加载回答数据
+            loadAnswerData(question.answer);
+
+            // 显示模态框
+            const modal = new bootstrap.Modal(document.getElementById('editQuestionModal'));
+            modal.show();
+        }
+
+        // 显示对应的回答内容区域
+        function showAnswerContent(type) {
+            // 隐藏所有内容区域
+            document.querySelectorAll('.answer-content').forEach(el => el.classList.add('d-none'));
+
+            // 显示选中的内容区域
+            const contentId = `${type}-answer-content`;
+            document.getElementById(contentId).classList.remove('d-none');
+
+            // 更新预览
+            updateAnswerPreview();
+        }
+
+        // 加载回答数据到表单
+        function loadAnswerData(answer) {
+            if (!answer) {
+                // 新问题，初始化空回答
+                initEmptyAnswer();
+                return;
+            }
+
+            if (typeof answer === 'string') {
+                // 简单文本
+                document.querySelector('.answer-type-btn[data-type="text"]').click();
+                document.getElementById('text-answer').value = answer;
+            } else if (Array.isArray(answer)) {
+                // 列表
+                document.querySelector('.answer-type-btn[data-type="list"]').click();
+                const container = document.getElementById('list-items');
+                container.innerHTML = '';
+
+                answer.forEach(item => {
+                    addListItem(item);
+                });
+            } else if (typeof answer === 'object' && answer.type) {
+                // 复杂类型
+                switch (answer.type) {
+                    case 'steps':
+                        document.querySelector('.answer-type-btn[data-type="steps"]').click();
+                        const stepsContainer = document.getElementById('steps-container');
+                        stepsContainer.innerHTML = '';
+
+                        answer.items.forEach(item => {
+                            addStepItem(item);
+                        });
+                        break;
+
+                    case 'code':
+                        document.querySelector('.answer-type-btn[data-type="code"]').click();
+                        document.getElementById('code-language').value = answer.language || '';
+                        document.getElementById('code-content').value = answer.content || '';
+                        break;
+
+                    case 'alert':
+                        document.querySelector('.answer-type-btn[data-type="alert"]').click();
+                        document.getElementById('alert-level').value = answer.level || 'info';
+                        document.getElementById('alert-title').value = answer.title || '';
+                        document.getElementById('alert-content').value = answer.content || '';
+                        break;
+
+                    case 'grid':
+                        document.querySelector('.answer-type-btn[data-type="grid"]').click();
+                        const gridContainer = document.getElementById('grid-container');
+                        gridContainer.innerHTML = '';
+
+                        answer.items.forEach(item => {
+                            addGridItem(item);
+                        });
+                        break;
+
+                    case 'links':
+                        document.querySelector('.answer-type-btn[data-type="links"]').click();
+                        const linksContainer = document.getElementById('links-container');
+                        linksContainer.innerHTML = '';
+
+                        answer.items.forEach(item => {
+                            addLinkItem(item);
+                        });
+                        break;
+
+                    case 'table':
+                        document.querySelector('.answer-type-btn[data-type="table"]').click();
+                        document.getElementById('table-headers').value = answer.headers ? answer.headers.join(',') : '';
+                        tableHeaders = answer.headers || [];
+
+                        const tableRowsContainer = document.getElementById('table-rows-container');
+                        tableRowsContainer.innerHTML = '';
+
+                        if (answer.rows && answer.rows.length > 0) {
+                            answer.rows.forEach((row, index) => {
+                                addTableRow(row, index);
+                            });
+                        } else {
+                            tableRowsContainer.innerHTML = '<div class="mb-2"><small class="text-muted">添加表格行后编辑</small></div>';
+                        }
+                        break;
+
+                    case 'video':
+                        document.querySelector('.answer-type-btn[data-type="video"]').click();
+                        document.getElementById('video-url').value = answer.url || '';
+                        document.getElementById('video-caption').value = answer.caption || '';
+                        break;
+
+                    case 'collapse':
+                        document.querySelector('.answer-type-btn[data-type="collapse"]').click();
+                        const collapseContainer = document.getElementById('collapse-container');
+                        collapseContainer.innerHTML = '';
+
+                        answer.items.forEach(item => {
+                            addCollapseItem(item);
+                        });
+                        break;
+
+                    case 'rating':
+                        document.querySelector('.answer-type-btn[data-type="rating"]').click();
+                        document.getElementById('rating-question').value = answer.question || '';
+                        break;
+
+                    default:
+                        initEmptyAnswer();
+                }
+            } else {
+                initEmptyAnswer();
+            }
+        }
+
+        // 初始化空回答
+        function initEmptyAnswer() {
+            switch (currentAnswerType) {
+                case 'text':
+                    document.getElementById('text-answer').value = '';
+                    break;
+                case 'list':
+                    document.getElementById('list-items').innerHTML = '';
+                    addListItem();
+                    break;
+                case 'steps':
+                    document.getElementById('steps-container').innerHTML = '';
+                    addStepItem();
+                    break;
+                case 'code':
+                    document.getElementById('code-language').value = '';
+                    document.getElementById('code-content').value = '';
+                    break;
+                case 'alert':
+                    document.getElementById('alert-level').value = 'info';
+                    document.getElementById('alert-title').value = '';
+                    document.getElementById('alert-content').value = '';
+                    break;
+                case 'grid':
+                    document.getElementById('grid-container').innerHTML = '';
+                    addGridItem();
+                    break;
+                case 'links':
+                    document.getElementById('links-container').innerHTML = '';
+                    addLinkItem();
+                    break;
+                case 'table':
+                    document.getElementById('table-headers').value = '';
+                    tableHeaders = [];
+                    document.getElementById('table-rows-container').innerHTML =
+                        '<div class="mb-2"><small class="text-muted">添加表格行后编辑</small></div>';
+                    break;
+                case 'video':
+                    document.getElementById('video-url').value = '';
+                    document.getElementById('video-caption').value = '';
+                    break;
+                case 'collapse':
+                    document.getElementById('collapse-container').innerHTML = '';
+                    addCollapseItem();
+                    break;
+                case 'rating':
+                    document.getElementById('rating-question').value = '这个回答对您有帮助吗？';
+                    break;
+            }
+        }
+
+        // 保存问题更改
+        function saveQuestionChanges() {
+            const questionText = document.getElementById('edit-question-text').value.trim();
+            const version = document.getElementById('edit-question-version').value.trim();
+
+            if (!questionText) return;
+
+            // 更新问题基本信息
+            const question = faqData.categories[currentCategoryIndex].questions[currentQuestionIndex];
+            question.question = questionText;
+            question.version = version || '1.0.0';
+
+            // 根据当前类型获取回答数据
+            question.answer = getAnswerData();
+
+            // 关闭模态框
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editQuestionModal'));
+            modal.hide();
+
+            // 更新UI
+            renderCategories();
+            updatePreview();
+        }
+
+        // 根据当前类型获取回答数据
+        function getAnswerData() {
+            switch (currentAnswerType) {
+                case 'text':
+                    return document.getElementById('text-answer').value.trim();
+
+                case 'list':
+                    const listItems = Array.from(document.querySelectorAll('.list-item')).map(input => input.value.trim());
+                    return listItems.filter(item => item);
+
+                case 'steps':
+                    const steps = Array.from(document.querySelectorAll('.step-item')).map(item => {
+                        return {
+                            title: item.querySelector('.step-title').value.trim(),
+                            content: item.querySelector('.step-content').value.trim()
+                        };
+                    }).filter(step => step.title || step.content);
+
+                    return {
+                        type: 'steps',
+                        items: steps
+                    };
+
+                case 'code':
+                    return {
+                        type: 'code',
+                        language: document.getElementById('code-language').value.trim(),
+                        content: document.getElementById('code-content').value.trim()
+                    };
+
+                case 'alert':
+                    return {
+                        type: 'alert',
+                        level: document.getElementById('alert-level').value,
+                        title: document.getElementById('alert-title').value.trim(),
+                        content: document.getElementById('alert-content').value.trim()
+                    };
+
+                case 'grid':
+                    const gridItems = Array.from(document.querySelectorAll('.grid-item')).map(item => {
+                        return {
+                            title: item.querySelector('.grid-title').value.trim(),
+                            content: item.querySelector('.grid-content').value.trim()
+                        };
+                    }).filter(gridItem => gridItem.title || gridItem.content);
+
+                    return {
+                        type: 'grid',
+                        items: gridItems
+                    };
+
+                case 'links':
+                    const linkItems = Array.from(document.querySelectorAll('.link-item')).map(item => {
+                        return {
+                            name: item.querySelector('.link-name').value.trim(),
+                            url: item.querySelector('.link-url').value.trim(),
+                            icon: item.querySelector('.link-icon').value.trim()
+                        };
+                    }).filter(linkItem => linkItem.name || linkItem.url);
+
+                    return {
+                        type: 'links',
+                        items: linkItems
+                    };
+
+                case 'table':
+                    const headers = document.getElementById('table-headers').value.trim();
+                    const headerArray = headers ? headers.split(',').map(h => h.trim()) : [];
+
+                    const rows = Array.from(document.querySelectorAll('.table-row-item')).map(item => {
+                        return JSON.parse(item.dataset.row);
+                    });
+
+                    return {
+                        type: 'table',
+                        headers: headerArray,
+                        rows: rows
+                    };
+
+                case 'video':
+                    return {
+                        type: 'video',
+                        url: document.getElementById('video-url').value.trim(),
+                        caption: document.getElementById('video-caption').value.trim()
+                    };
+
+                case 'collapse':
+                    const collapseItems = Array.from(document.querySelectorAll('.collapse-item')).map(item => {
+                        return {
+                            title: item.querySelector('.collapse-title').value.trim(),
+                            content: item.querySelector('.collapse-content').value.trim()
+                        };
+                    }).filter(collapseItem => collapseItem.title || collapseItem.content);
+
+                    return {
+                        type: 'collapse',
+                        items: collapseItems
+                    };
+
+                case 'rating':
+                    return {
+                        type: 'rating',
+                        question: document.getElementById('rating-question').value.trim()
+                    };
+
+                default:
+                    return "";
+            }
+        }
+
+        // 添加列表项
+        function addListItem(value = '') {
+            const container = document.getElementById('list-items');
+            const div = document.createElement('div');
+            div.className = 'input-group mb-2';
+            div.innerHTML = `
+                <input type="text" class="form-control list-item" placeholder="列表项内容" value="${value}">
+                <button class="btn btn-outline-danger remove-list-item" type="button">
+                    <i class="bi bi-trash"></i>
+                </button>
+            `;
+            container.appendChild(div);
+
+            // 为输入框添加事件监听
+            div.querySelector('.list-item').addEventListener('input', updateAnswerPreview);
+
+            updateAnswerPreview();
+        }
+
+        // 移除列表项
+        function removeListItem(e) {
+            const item = e.target.closest('.input-group');
+            item.remove();
+            updateAnswerPreview();
+        }
+
+        // 添加步骤项
+        function addStepItem(data = { title: '', content: '' }) {
+            const container = document.getElementById('steps-container');
+            const div = document.createElement('div');
+            div.className = 'step-item';
+            div.innerHTML = `
+                <div class="d-flex align-items-center mb-2">
+                    <i class="bi bi-grip-vertical sortable-handle me-2"></i>
+                    <input type="text" class="form-control step-title" placeholder="步骤标题" value="${data.title || ''}">
+                    <button class="btn btn-outline-danger remove-step ms-2" type="button">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+                <textarea class="form-control step-content mb-2" rows="2" placeholder="步骤详细内容">${data.content || ''}</textarea>
+            `;
+            container.appendChild(div);
+
+            // 为输入框添加事件监听
+            div.querySelector('.step-title').addEventListener('input', updateAnswerPreview);
+            div.querySelector('.step-content').addEventListener('input', updateAnswerPreview);
+
+            updateAnswerPreview();
+        }
+
+        // 移除步骤项
+        function removeStepItem(e) {
+            const item = e.target.closest('.step-item');
+            item.remove();
+            updateAnswerPreview();
+        }
+
+        // 添加网格项
+        function addGridItem(data = { title: '', content: '' }) {
+            const container = document.getElementById('grid-container');
+            const div = document.createElement('div');
+            div.className = 'grid-item';
+            div.innerHTML = `
+                <div class="d-flex align-items-center mb-2">
+                    <i class="bi bi-grip-vertical sortable-handle me-2"></i>
+                    <input type="text" class="form-control grid-title" placeholder="网格项标题" value="${data.title || ''}">
+                    <button class="btn btn-outline-danger remove-grid-item ms-2" type="button">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+                <textarea class="form-control grid-content" rows="2" placeholder="网格项内容">${data.content || ''}</textarea>
+            `;
+            container.appendChild(div);
+
+            // 为输入框添加事件监听
+            div.querySelector('.grid-title').addEventListener('input', updateAnswerPreview);
+            div.querySelector('.grid-content').addEventListener('input', updateAnswerPreview);
+
+            updateAnswerPreview();
+        }
+
+        // 移除网格项
+        function removeGridItem(e) {
+            const item = e.target.closest('.grid-item');
+            item.remove();
+            updateAnswerPreview();
+        }
+
+        // 添加链接项
+        function addLinkItem(data = { name: '', url: '', icon: '' }) {
+            const container = document.getElementById('links-container');
+            const div = document.createElement('div');
+            div.className = 'link-item';
+            div.innerHTML = `
+                <div class="d-flex align-items-center mb-2">
+                    <i class="bi bi-grip-vertical sortable-handle me-2"></i>
+                    <input type="text" class="form-control link-name" placeholder="链接名称" value="${data.name || ''}">
+                    <button class="btn btn-outline-danger remove-link-item ms-2" type="button">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+                <div class="mb-2">
+                    <input type="text" class="form-control link-url" placeholder="链接URL (https://...)" value="${data.url || ''}">
+                </div>
+                <div>
+                    <input type="text" class="form-control link-icon" placeholder="图标URL (可选)" value="${data.icon || ''}">
+                </div>
+            `;
+            container.appendChild(div);
+
+            // 为输入框添加事件监听
+            div.querySelector('.link-name').addEventListener('input', updateAnswerPreview);
+            div.querySelector('.link-url').addEventListener('input', updateAnswerPreview);
+            div.querySelector('.link-icon').addEventListener('input', updateAnswerPreview);
+
+            updateAnswerPreview();
+        }
+
+        // 移除链接项
+        function removeLinkItem(e) {
+            const item = e.target.closest('.link-item');
+            item.remove();
+            updateAnswerPreview();
+        }
+
+        // 添加表格行
+        function addTableRow(rowData = null, index = null) {
+            const container = document.getElementById('table-rows-container');
+
+            // 如果是第一次添加行，清除提示
+            if (container.querySelector('.text-muted')) {
+                container.innerHTML = '';
+            }
+
+            const headers = document.getElementById('table-headers').value.trim();
+            tableHeaders = headers ? headers.split(',').map(h => h.trim()) : [];
+
+            const rowValues = rowData || Array(tableHeaders.length).fill('');
+
+            const div = document.createElement('div');
+            div.className = 'table-row-item d-flex align-items-center mb-2';
+            if (rowData) {
+                div.dataset.row = JSON.stringify(rowValues);
+            } else {
+                div.dataset.row = JSON.stringify(rowValues);
+            }
+
+            div.innerHTML = `
+                <i class="bi bi-grip-vertical sortable-handle me-2"></i>
+                <div class="flex-grow-1">
+                    ${rowValues.join(', ')}
+                </div>
+                <button class="btn btn-sm btn-outline-primary edit-table-row me-2" type="button">
+                    <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger remove-table-row" type="button">
+                    <i class="bi bi-trash"></i>
+                </button>
+            `;
+
+            if (index !== null && index < container.children.length) {
+                container.insertBefore(div, container.children[index]);
+            } else {
+                container.appendChild(div);
+            }
+
+            updateAnswerPreview();
+        }
+
+        // 编辑表格行
+        function editTableRow(e) {
+            const rowItem = e.target.closest('.table-row-item');
+            const rowData = JSON.parse(rowItem.dataset.row);
+
+            document.getElementById('edit-row-index').value = Array.from(rowItem.parentNode.children).indexOf(rowItem);
+
+            const container = document.getElementById('row-fields-container');
+            container.innerHTML = '';
+
+            tableHeaders.forEach((header, i) => {
+                const div = document.createElement('div');
+                div.className = 'mb-3';
+                div.innerHTML = `
+                    <label class="form-label">${header || `列 ${i + 1}`}</label>
+                    <input type="text" class="form-control row-field" value="${rowData[i] || ''}">
+                `;
+                container.appendChild(div);
+            });
+
+            const modal = new bootstrap.Modal(document.getElementById('editTableRowModal'));
+            modal.show();
+        }
+
+        // 保存表格行更改
+        function saveTableRowChanges() {
+            const index = parseInt(document.getElementById('edit-row-index').value);
+            const container = document.getElementById('table-rows-container');
+            const rowItem = container.children[index];
+
+            const rowValues = Array.from(document.querySelectorAll('.row-field')).map(input => input.value.trim());
+            rowItem.dataset.row = JSON.stringify(rowValues);
+            rowItem.querySelector('div').textContent = rowValues.join(', ');
+
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editTableRowModal'));
+            modal.hide();
+
+            updateAnswerPreview();
+        }
+
+        // 移除表格行
+        function removeTableRow(e) {
+            const rowItem = e.target.closest('.table-row-item');
+            rowItem.remove();
+
+            const container = document.getElementById('table-rows-container');
+            if (container.children.length === 0) {
+                container.innerHTML = '<div class="mb-2"><small class="text-muted">添加表格行后编辑</small></div>';
+            }
+
+            updateAnswerPreview();
+        }
+
+        // 添加折叠项
+        function addCollapseItem(data = { title: '', content: '' }) {
+            const container = document.getElementById('collapse-container');
+            const div = document.createElement('div');
+            div.className = 'collapse-item';
+            div.innerHTML = `
+                <div class="d-flex align-items-center mb-2">
+                    <i class="bi bi-grip-vertical sortable-handle me-2"></i>
+                    <input type="text" class="form-control collapse-title" placeholder="折叠项标题" value="${data.title || ''}">
+                    <button class="btn btn-outline-danger remove-collapse-item ms-2" type="button">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+                <textarea class="form-control collapse-content mb-2" rows="2" placeholder="折叠项内容">${data.content || ''}</textarea>
+            `;
+            container.appendChild(div);
+
+            // 为输入框添加事件监听
+            div.querySelector('.collapse-title').addEventListener('input', updateAnswerPreview);
+            div.querySelector('.collapse-content').addEventListener('input', updateAnswerPreview);
+
+            updateAnswerPreview();
+        }
+
+        // 移除折叠项
+        function removeCollapseItem(e) {
+            const item = e.target.closest('.collapse-item');
+            item.remove();
+            updateAnswerPreview();
+        }
+
+        // 更新回答预览
+        function updateAnswerPreview() {
+            const answer = getAnswerData();
+            const preview = document.getElementById('answer-preview');
+
+            if (!answer) {
+                preview.innerHTML = '<p class="text-muted">无内容</p>';
+                return;
+            }
+
+            if (typeof answer === 'string') {
+                preview.innerHTML = `<p>${answer.replace(/\n/g, '<br>')}</p>`;
+            } else if (Array.isArray(answer)) {
+                if (answer.length === 0) {
+                    preview.innerHTML = '<p class="text-muted">空列表</p>';
+                } else {
+                    preview.innerHTML = '<ul>' + answer.map(item => `<li>${item}</li>`).join('') + '</ul>';
+                }
+            } else if (typeof answer === 'object') {
+                switch (answer.type) {
+                    case 'steps':
+                        if (!answer.items || answer.items.length === 0) {
+                            preview.innerHTML = '<p class="text-muted">无步骤</p>';
+                        } else {
+                            preview.innerHTML = '<ol>' +
+                                answer.items.map(item =>
+                                    `<li>
+                                        <strong>${item.title || '无标题'}</strong>
+                                        <p>${item.content || '无内容'}</p>
+                                    </li>`
+                                ).join('') +
+                                '</ol>';
+                        }
+                        break;
+
+                    case 'code':
+                        preview.innerHTML = `
+                            <p><strong>语言:</strong> ${answer.language || '未指定'}</p>
+                            <pre><code>${answer.content || '// 无代码'}</code></pre>
+                        `;
+                        break;
+
+                    case 'alert':
+                        preview.innerHTML = `
+                            <div class="alert alert-${answer.level || 'info'}">
+                                <h5>${answer.title || '无标题'}</h5>
+                                <p>${answer.content || '无内容'}</p>
+                            </div>
+                        `;
+                        break;
+
+                    case 'grid':
+                        if (!answer.items || answer.items.length === 0) {
+                            preview.innerHTML = '<p class="text-muted">无网格项</p>';
+                        } else {
+                            preview.innerHTML = `
+                                <div class="row">
+                                    ${answer.items.map(item => `
+                                        <div class="col-md-4 mb-3">
+                                            <div class="card">
+                                                <div class="card-body">
+                                                    <h5 class="card-title">${item.title || '无标题'}</h5>
+                                                    <p class="card-text">${item.content || '无内容'}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            `;
+                        }
+                        break;
+
+                    case 'links':
+                        if (!answer.items || answer.items.length === 0) {
+                            preview.innerHTML = '<p class="text-muted">无链接</p>';
+                        } else {
+                            preview.innerHTML = '<div class="list-group">' +
+                                answer.items.map(item => `
+                                    <a href="${item.url || '#'}" class="list-group-item list-group-item-action" target="_blank">
+                                        ${item.icon ? `<img src="${item.icon}" width="20" height="20" class="me-2">` : ''}
+                                        ${item.name || '未命名链接'}
+                                    </a>
+                                `).join('') +
+                                '</div>';
+                        }
+                        break;
+
+                    case 'table':
+                        preview.innerHTML = `
+                            <div class="table-responsive">
+                                <table class="table table-bordered">
+                                    <thead>
+                                        <tr>
+                                            ${(answer.headers || []).map(header => `<th>${header || ''}</th>`).join('')}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${(answer.rows || []).map(row => `
+                                            <tr>
+                                                ${row.map(cell => `<td>${cell || ''}</td>`).join('')}
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        `;
+                        break;
+
+                    case 'video':
+                        preview.innerHTML = `
+                            <div class="ratio ratio-16x9 mb-2">
+                                <iframe src="${answer.url || ''}" allowfullscreen></iframe>
+                            </div>
+                            <p class="text-muted">${answer.caption || '无说明文字'}</p>
+                        `;
+                        break;
+
+                    case 'collapse':
+                        if (!answer.items || answer.items.length === 0) {
+                            preview.innerHTML = '<p class="text-muted">无折叠项</p>';
+                        } else {
+                            preview.innerHTML = '<div class="accordion">' +
+                                answer.items.map((item, i) => `
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-preview-${i}">
+                                                ${item.title || '无标题'}
+                                            </button>
+                                        </h2>
+                                        <div id="collapse-preview-${i}" class="accordion-collapse collapse">
+                                            <div class="accordion-body">
+                                                ${item.content || '无内容'}
+                                            </div>
+                                        </div>
+                                    </div>
+                                `).join('') +
+                                '</div>';
+                        }
+                        break;
+
+                    case 'rating':
+                        preview.innerHTML = `
+                            <div class="text-center">
+                                <p class="lead">${answer.question || '这个回答对您有帮助吗？'}</p>
+                                <div class="d-flex justify-content-center">
+                                    ${[1, 2, 3, 4, 5].map(i => `
+                                        <i class="bi bi-star-fill text-warning fs-3 mx-1"></i>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `;
+                        break;
+
+                    default:
+                        preview.innerHTML = '<p class="text-muted">无法预览此类型</p>';
+                }
+            } else {
+                preview.innerHTML = '<p class="text-muted">无法预览此内容</p>';
+            }
+        }
+
+        // 渲染所有分类
+        function renderCategories() {
+            const container = document.getElementById('categories-container');
+            container.innerHTML = '';
+
+            if (faqData.categories.length === 0) {
+                container.innerHTML = '<p class="text-muted">暂无分类，请点击上方"添加分类"按钮开始创建。</p>';
+                return;
+            }
+
+            faqData.categories.forEach((category, categoryIndex) => {
+                const categoryCard = document.createElement('div');
+                categoryCard.className = 'card mb-3 category-card';
+                categoryCard.dataset.index = categoryIndex;
+
+                categoryCard.innerHTML = `
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-grip-vertical sortable-handle me-2"></i>
+                            <h5 class="mb-0">${category.name}</h5>
+                        </div>
+                        <div>
+                            <button class="btn btn-sm btn-outline-primary add-question-btn" data-category-index="${categoryIndex}">
+                                <i class="bi bi-plus-lg"></i> 添加问题
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger ms-2 remove-category-btn" data-category-index="${categoryIndex}">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="questions-list" id="questions-list-${categoryIndex}">
+                            ${category.questions.length === 0 ?
+                        '<p class="text-muted">此分类下暂无问题</p>' :
+                        category.questions.map((question, questionIndex) => `
+                                    <div class="card mb-2 question-card" data-question-index="${questionIndex}">
+                                        <div class="card-body py-2">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div class="d-flex align-items-center">
+                                                    <i class="bi bi-grip-vertical sortable-handle me-2"></i>
+                                                    <div>
+                                                        <h6 class="mb-0">${question.question}</h6>
+                                                        <small class="text-muted">版本: ${question.version}</small>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <button class="btn btn-sm btn-outline-primary edit-question-btn" 
+                                                        data-category-index="${categoryIndex}" 
+                                                        data-question-index="${questionIndex}">
+                                                        <i class="bi bi-pencil"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-outline-danger ms-2 remove-question-btn" 
+                                                        data-category-index="${categoryIndex}" 
+                                                        data-question-index="${questionIndex}">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `).join('')
+                    }
+                        </div>
+                    </div>
+                `;
+
+                container.appendChild(categoryCard);
+
+                // 初始化问题排序
+                new Sortable(document.getElementById(`questions-list-${categoryIndex}`), {
+                    handle: '.sortable-handle',
+                    animation: 150,
+                    ghostClass: 'sortable-ghost',
+                    onEnd: function () {
+                        // 更新问题顺序
+                        const questionsContainer = document.getElementById(`questions-list-${categoryIndex}`);
+                        const questions = Array.from(questionsContainer.querySelectorAll('.question-card'));
+                        const newOrder = questions.map(card => parseInt(card.dataset.questionIndex));
+                        const sortedQuestions = [];
+
+                        newOrder.forEach(index => {
+                            sortedQuestions.push(category.questions[index]);
+                        });
+
+                        faqData.categories[categoryIndex].questions = sortedQuestions;
+                        updatePreview();
+                    }
+                });
+
+                // 绑定添加问题按钮事件
+                categoryCard.querySelector('.add-question-btn').addEventListener('click', function () {
+                    showAddQuestionModal(categoryIndex);
+                });
+
+                // 绑定删除分类按钮事件
+                categoryCard.querySelector('.remove-category-btn').addEventListener('click', function () {
+                    if (confirm(`确定要删除分类 "${category.name}" 及其所有问题吗？`)) {
+                        faqData.categories.splice(categoryIndex, 1);
+                        renderCategories();
+                        updatePreview();
+                    }
+                });
+
+                // 绑定编辑问题按钮事件 (委托)
+                categoryCard.addEventListener('click', function (e) {
+                    if (e.target.closest('.edit-question-btn')) {
+                        const btn = e.target.closest('.edit-question-btn');
+                        const catIndex = parseInt(btn.dataset.categoryIndex);
+                        const quesIndex = parseInt(btn.dataset.questionIndex);
+                        showEditQuestionModal(catIndex, quesIndex);
+                    }
+
+                    if (e.target.closest('.remove-question-btn')) {
+                        const btn = e.target.closest('.remove-question-btn');
+                        const catIndex = parseInt(btn.dataset.categoryIndex);
+                        const quesIndex = parseInt(btn.dataset.questionIndex);
+                        const question = faqData.categories[catIndex].questions[quesIndex].question;
+
+                        if (confirm(`确定要删除问题 "${question}" 吗？`)) {
+                            faqData.categories[catIndex].questions.splice(quesIndex, 1);
+                            renderCategories();
+                            updatePreview();
+                        }
+                    }
+                });
+            });
+        }
+
+        // 更新JSON预览
+        function updatePreview() {
+            document.getElementById('json-preview').textContent = JSON.stringify(faqData, null, 2);
+        }
+
+        // 导出JSON
+        function exportJSON() {
+            const dataStr = JSON.stringify(faqData, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+
+            const exportFileDefaultName = 'faq-data.json';
+
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+        }
+    </script>
+</body>
+
+</html>
