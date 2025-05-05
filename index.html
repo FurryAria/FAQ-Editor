@@ -86,6 +86,20 @@
 </head>
 
 <body>
+    <!-- 新增Toast通知 -->
+    <div class="toast-container">
+        <div id="import-success-toast" class="toast align-items-center text-white bg-success" role="alert"
+            aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    JSON导入成功！
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+                    aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+
     <div class="container-fluid py-4">
         <div class="row mb-4">
             <div class="col">
@@ -98,7 +112,6 @@
             <!-- 左侧编辑区 -->
             <div class="col-md-6">
                 <div class="card mb-4">
-                    <!-- 在card-header部分修改 -->
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">FAQ 结构</h5>
                         <div>
@@ -129,8 +142,8 @@
                         <h5 class="mb-0">JSON 预览</h5>
                     </div>
                     <div class="card-body">
-                        <div class="preview-area" id="json-preview">
-                            <p class="text-muted">编辑内容将在这里实时预览...</p>
+                        <div class="preview-area">
+                            <pre class="json-preview" id="json-preview"><p class="text-muted">编辑内容将在这里实时预览...</p></pre>
                         </div>
                     </div>
                 </div>
@@ -429,6 +442,9 @@
         let currentAnswerType = "text";
         let tableHeaders = [];
 
+        // 初始化Toast
+        const importSuccessToast = new bootstrap.Toast(document.getElementById('import-success-toast'));
+
         // DOM 加载完成后初始化
         document.addEventListener('DOMContentLoaded', function () {
             // 初始化示例数据
@@ -456,12 +472,10 @@
             document.getElementById('add-category-btn').addEventListener('click', showAddCategoryModal);
             document.getElementById('confirm-add-category').addEventListener('click', addCategory);
 
-            // 添加问题按钮 (在分类卡片上动态绑定)
-
             // 导出JSON按钮
             document.getElementById('export-json-btn').addEventListener('click', exportJSON);
 
-            // 添加问题模态框
+            // 添加问题按钮 (在分类卡片上动态绑定)
             document.getElementById('confirm-add-question').addEventListener('click', addQuestion);
 
             // 编辑问题模态框
@@ -575,10 +589,23 @@
                         }
                     }
 
+                    // 递增版本号
+                    const versionParts = importedData.version.split('.');
+                    if (versionParts.length === 3) {
+                        const patchVersion = parseInt(versionParts[2]);
+                        if (!isNaN(patchVersion)) {
+                            versionParts[2] = (patchVersion + 1).toString();
+                            importedData.version = versionParts.join('.');
+                        }
+                    }
+
                     // 更新数据并重新渲染
                     faqData = importedData;
                     renderCategories();
                     updatePreview();
+
+                    // 显示成功通知
+                    importSuccessToast.show();
 
                     // 重置文件输入，允许重复导入同一文件
                     document.getElementById('json-file-input').value = '';
@@ -1283,12 +1310,13 @@
             }
 
             if (typeof answer === 'string') {
+                // 替换换行符为<br>标签
                 preview.innerHTML = `<p>${answer.replace(/\n/g, '<br>')}</p>`;
             } else if (Array.isArray(answer)) {
                 if (answer.length === 0) {
                     preview.innerHTML = '<p class="text-muted">空列表</p>';
                 } else {
-                    preview.innerHTML = '<ul>' + answer.map(item => `<li>${item}</li>`).join('') + '</ul>';
+                    preview.innerHTML = '<ul>' + answer.map(item => `<li>${item.replace(/\n/g, '<br>')}</li>`).join('') + '</ul>';
                 }
             } else if (typeof answer === 'object') {
                 switch (answer.type) {
@@ -1300,7 +1328,7 @@
                                 answer.items.map(item =>
                                     `<li>
                                         <strong>${item.title || '无标题'}</strong>
-                                        <p>${item.content || '无内容'}</p>
+                                        <p>${(item.content || '无内容').replace(/\n/g, '<br>')}</p>
                                     </li>`
                                 ).join('') +
                                 '</ol>';
@@ -1318,7 +1346,7 @@
                         preview.innerHTML = `
                             <div class="alert alert-${answer.level || 'info'}">
                                 <h5>${answer.title || '无标题'}</h5>
-                                <p>${answer.content || '无内容'}</p>
+                                <p>${(answer.content || '无内容').replace(/\n/g, '<br>')}</p>
                             </div>
                         `;
                         break;
@@ -1334,7 +1362,7 @@
                                             <div class="card">
                                                 <div class="card-body">
                                                     <h5 class="card-title">${item.title || '无标题'}</h5>
-                                                    <p class="card-text">${item.content || '无内容'}</p>
+                                                    <p class="card-text">${(item.content || '无内容').replace(/\n/g, '<br>')}</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -1371,7 +1399,7 @@
                                     <tbody>
                                         ${(answer.rows || []).map(row => `
                                             <tr>
-                                                ${row.map(cell => `<td>${cell || ''}</td>`).join('')}
+                                                ${row.map(cell => `<td>${(cell || '').replace(/\n/g, '<br>')}</td>`).join('')}
                                             </tr>
                                         `).join('')}
                                     </tbody>
@@ -1403,7 +1431,7 @@
                                         </h2>
                                         <div id="collapse-preview-${i}" class="accordion-collapse collapse">
                                             <div class="accordion-body">
-                                                ${item.content || '无内容'}
+                                                ${(item.content || '无内容').replace(/\n/g, '<br>')}
                                             </div>
                                         </div>
                                     </div>
